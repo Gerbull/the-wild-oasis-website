@@ -13,7 +13,7 @@ export async function getCabin(id) {
 		.single();
 
 	// For testing
-	// await new Promise((res) => setTimeout(res, 1000));
+	// await new Promise((res) => setTimeout(res, 2000));
 
 	if (error) {
 		console.error(error);
@@ -136,6 +136,9 @@ export async function getSettings() {
 		console.error(error);
 		throw new Error('Settings could not be loaded');
 	}
+
+	// For testing
+	// await new Promise((res) => setTimeout(res, 5000));
 
 	return data;
 }
