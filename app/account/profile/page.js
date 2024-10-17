@@ -1,13 +1,15 @@
 import SelectCountry from '@/app/_components/SelectCountry';
 import UpdateProfileForm from '@/app/_components/UpdateProfileForm';
+import { auth } from '@/app/_lib/auth';
+import { getGuest } from '@/app/_lib/data-service';
 
 export const metadata = {
 	title: 'Update Profile',
 };
 
-export default function Page() {
-	const countryFlag = 'pt.jpg';
-	const nationality = 'portugal';
+export default async function Page() {
+	const session = await auth();
+	const guest = await getGuest(session.user.email);
 
 	return (
 		<div>
@@ -19,13 +21,13 @@ export default function Page() {
 				Providing the following information will make your check-in process
 				faster and smoother. See you soon!
 			</p>
-			<UpdateProfileForm>
+			<UpdateProfileForm guest={guest}>
 				{/* down here is the server component, that fetches data from the API and builds a list of countries on the server and only than it comes to the props of the client component as a static generated instance of server component*/}
 				<SelectCountry
 					name="nationality"
 					id="nationality"
 					className="px-5 py-3 bg-primary-200 text-primary-800 w-full shadow-sm rounded-sm"
-					defaultCountry={nationality}
+					defaultCountry={guest.nationality}
 				/>
 			</UpdateProfileForm>
 		</div>
