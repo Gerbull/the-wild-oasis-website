@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { auth, signIn, signOut } from './auth';
 import { supabase } from './supabase';
 import { getBookings } from './data-service';
+import { redirect } from 'next/navigation';
 
 export async function updateGuest(formData) {
 	const session = await auth(); // very impoortant checking authentication
@@ -27,7 +28,52 @@ export async function updateGuest(formData) {
 	revalidatePath('/account/profile'); // very important to revalidate cache after all manipolations to have the fresh state of the information
 }
 
+export async function updateBooking(formData) {
+	const session = await auth(); // very impoortant checking authentication
+	if (!session) throw new Error('You must be logged in');
+
+	// const [numGuests = Number(numGuests), id2] = formData
+	// 	.get('numGuests')
+	// 	.split('%');
+
+	const numGuests = Number(formData.get('numGuests'));
+	const observations = formData.get('observations');
+	const id = Number(formData.get('bookingId'));
+
+	const guestBookings = await getBookings(session.user.guestId); // Checks if it is the users booking
+	const guestBookingIds = guestBookings.map((booking) => Number(booking.id));
+
+	if (!guestBookingIds.includes(id))
+		throw new Error('You are not allowed to update this booking');
+
+	if (
+		!/^[a-zA-Zа-яА-ЯёЁ0-9\s.,!?()\-:;@#$%^&*+=_~]{0,5000}$/.test(observations)
+	)
+		throw new Error(
+			`Your message contains restricted symbols or longer, than 5 000 symbols`
+		);
+
+	const updatedFields = { numGuests, observations };
+
+	const { error } = await supabase
+		.from('bookings')
+		.update(updatedFields)
+		.eq('id', id)
+		.select()
+		.single();
+
+	if (error) throw new Error('Booking could not be updated');
+
+	revalidatePath(`/account/reservations/edit/${id}`);
+
+	redirect('/account/reservations');
+}
+
 export async function deleteReservation(bookingId) {
+	// For testing
+	// await new Promise((res) => setTimeout(res, 2000));
+	// throw new Error();
+
 	const session = await auth(); // very impoortant checking authentication
 	if (!session) throw new Error('You must be logged in');
 
