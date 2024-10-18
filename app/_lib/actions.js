@@ -6,26 +6,31 @@ import { supabase } from './supabase';
 import { getBookings } from './data-service';
 import { redirect } from 'next/navigation';
 
-export async function updateGuest(formData) {
+export async function createBooking(bookindData, formData) {
 	const session = await auth(); // very impoortant checking authentication
 	if (!session) throw new Error('You must be logged in');
 
-	const nationalID = formData.get('nationalID');
-	const [nationality, countryFlag] = formData.get('nationality').split('%');
+	const newBooking = {
+		...bookindData,
+		guestId: session.user.guestId,
+		numGuests: Number(formData.get('numGuests')),
+		observations: formData.get('observations').slice(0, 5000),
+		extrasPrice: 0,
+		totalPrice: bookindData.cabinPrice,
+		isPaid: false,
+		hasBreakfast: false,
+		status: 'unconfirmed',
+	};
 
-	if (!/^[a-zA-Z0-9]{6,12}$/.test(nationalID))
-		throw new Error('Please, provide a valid national ID');
+	console.log(`🚧 newBooking:`, newBooking);
 
-	const updateData = { nationality, countryFlag, nationalID };
+	const { error } = await supabase.from('bookings').insert([newBooking]);
 
-	const { error } = await supabase
-		.from('guests')
-		.update(updateData)
-		.eq('id', session.user.guestId);
+	if (error) throw new Error('Booking could not be created');
 
-	if (error) throw new Error('Guest could not be updated');
+	revalidatePath(`/cabins/${bookindData.cabinId}`);
 
-	revalidatePath('/account/profile'); // very important to revalidate cache after all manipolations to have the fresh state of the information
+	redirect('/cabins/thankyou');
 }
 
 export async function updateBooking(formData) {
@@ -69,7 +74,7 @@ export async function updateBooking(formData) {
 	redirect('/account/reservations');
 }
 
-export async function deleteReservation(bookingId) {
+export async function deleteBooking(bookingId) {
 	// For testing
 	// await new Promise((res) => setTimeout(res, 2000));
 	// throw new Error();
@@ -91,6 +96,28 @@ export async function deleteReservation(bookingId) {
 	if (error) throw new Error('Booking could not be deleted');
 
 	revalidatePath('/account/reservations'); // very important to revalidate cache after all manipolations to have the fresh state of the information
+}
+
+export async function updateGuest(formData) {
+	const session = await auth(); // very impoortant checking authentication
+	if (!session) throw new Error('You must be logged in');
+
+	const nationalID = formData.get('nationalID');
+	const [nationality, countryFlag] = formData.get('nationality').split('%');
+
+	if (!/^[a-zA-Z0-9]{6,12}$/.test(nationalID))
+		throw new Error('Please, provide a valid national ID');
+
+	const updateData = { nationality, countryFlag, nationalID };
+
+	const { error } = await supabase
+		.from('guests')
+		.update(updateData)
+		.eq('id', session.user.guestId);
+
+	if (error) throw new Error('Guest could not be updated');
+
+	revalidatePath('/account/profile'); // very important to revalidate cache after all manipolations to have the fresh state of the information
 }
 
 export async function signInAction() {
